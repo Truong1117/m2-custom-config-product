@@ -1,0 +1,69 @@
+<?php
+
+namespace Commercers\DisplayAsParentPrice\Helper;
+
+use Magento\Framework\App\Helper\Context;
+use Magento\Framework\App\Helper\AbstractHelper;
+use Magento\Framework\Pricing\PriceCurrencyInterface;
+use Magento\Store\Model\ScopeInterface;
+use Magento\Catalog\Block\Product\ListProduct;
+
+
+
+class Data extends AbstractHelper
+{
+
+    protected $_productFactory;
+
+    protected $_blockListProduct;
+
+    protected $priceCurrency;
+
+    public function __construct(
+        Context $context,
+        \Magento\Catalog\Model\ProductFactory $productFactory,
+        PriceCurrencyInterface $priceCurrency,
+        ListProduct $blockListProduct
+    )
+    {
+        $this->_productFactory = $productFactory;
+        $this->priceCurrency = $priceCurrency;
+        $this->_blockListProduct = $blockListProduct;
+        parent::__construct($context);
+    }
+
+    public function getPriceDisplayAsParentPrice($configProduct){
+        $_children = $configProduct->getTypeInstance()->getUsedProductCollection($configProduct);
+        $price = "";
+        echo "<pre>";
+        var_dump($_children->getData());exit;
+        foreach ($_children as $child){
+            if($child->isSaleable() && $child->getData("display_as_parent_price")){
+                $price = $child->getPrice();
+                break;
+            }
+        }
+        if($price){
+            return $this->formatPrice($price);
+        }else{
+            $price = "";
+            foreach ($_children as $child){
+                if($child->isSaleable()){
+                    $price = $this->_productFactory->create()->load($child->getId())->getPrice();
+
+                    break;
+                }
+            }
+            if($price){
+                return $this->formatPrice($price);
+            }
+            return $this->_blockListProduct->getProductPrice($configProduct);
+        }
+    }
+    public function formatPrice($price)
+    {
+        return $this->priceCurrency->convertAndFormat($price, true);
+    }
+
+
+}
