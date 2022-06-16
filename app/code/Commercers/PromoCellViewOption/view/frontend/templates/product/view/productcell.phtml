@@ -1,0 +1,181 @@
+<?php
+/** @var \Commercers\PromoCellViewOption\Block\Product\View\ProductCell $block */
+$simpleProducts = $block->getSimpleProduct();
+$allowAttributes = $block->getAllowAttributes();
+//$attributeName = $allowAttribute->getProductAttribute()->getAttributeCode();
+$jsonConfigDecode = json_decode($block->getJsonConfig(), true);
+// echo "<pre>";
+// var_dump($jsonConfigDecode);exit;
+$allowAttributeOptions = array();
+foreach ($allowAttributes as $allowAttribute){
+    $allowAttributeOptions = $allowAttribute->getOptions();
+}
+?>
+<?php if (count($simpleProducts)) : ?>
+    <!--  Show options  -->
+    <div class="promocell-attribute-display">
+        <div class="promocell-product-options">
+		    <?php foreach ($allowAttributes as $allowAttribute): ?>
+                <span class="attr-label"><?= $allowAttribute->getLabel() ?></span>
+                <div class="options-wrapper">
+                    <?php
+                    //sort attribute by product id in backend 
+                    $attributeId = $block->escapeHtml($allowAttribute->getAttributeId());
+                    $newArrayAttributeOptionSortById = array();
+                    foreach ($jsonConfigDecode['index'] as $key => $value){
+                        foreach ($allowAttributeOptions as $allowAttributeOption){
+                            if($allowAttributeOption['value_index'] === $value[$attributeId]){
+                                $newArrayAttributeOptionSortById[$value[$attributeId]]=$allowAttributeOption;
+                                $newArrayAttributeOptionSortById[$value[$attributeId]]["product_id"]=$key;
+                            }
+                        }
+                    }
+                    ?>
+                    <?php
+                     //sort attribute by product position in backend 
+                    $sortArrayNewChildren = $block->getNewArrayAttributeOptionSortByPosition($newArrayAttributeOptionSortById);
+                    ?>
+				    <?php $attrOptions = $block->prepareOptions($sortArrayNewChildren);?>
+
+                    <!--  Attribute input  -->
+                    <input class="swatch-input super-attribute-select-custom"
+                           name="super_attribute[<?= $block->escapeHtml($allowAttribute->getAttributeId()) ?>]"
+                           type="text" value=""
+                           attr-id="<?= $block->escapeHtml($allowAttribute->getAttributeId()) ?>"
+                           data-selector="super_attribute[<?= $block->escapeHtml($allowAttribute->getAttributeId()) ?>]"
+                           aria-required="true"
+                           aria-invalid="false"/>
+				    <?php foreach ($attrOptions as $group => $options): ?>
+                        <div class="option-group">
+                            <label class="group-label">
+							    <?php if($group !== 'Normal') { echo $group;} ?>
+                            </label>
+                            <div class="option-values">
+							    <?php foreach (array_chunk($options, 2) as $chunk) : ?>
+                                    <div class="row">
+                                        <?php foreach ($chunk as $option) : ?>
+                                        <div class="value" attr-value="<?= $option['value_index'] ?>">
+                                            <span>
+                                                <?php echo $option['label']; ?>
+                                            </span>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+							    <?php endforeach; ?>
+                            </div>
+                        </div>
+				    <?php endforeach; ?>
+                </div>
+		    <?php endforeach; ?>
+        </div>
+        <div class="info-detail">
+            <div class="wrapper">
+                <div class="product-simple-info">
+                    <?php foreach ($simpleProducts as $product) : ?>
+                        <?php $attrVals = $block->getAttributeValueOfProduct($product); ?>
+                        <?php if ($attrVals):?>
+                            <div attr-val="<?php echo $attrVals; ?>" class="product-cell-item" hidden>
+                                <div class="header-block">
+                                    <div class="field-name"><h3><strong><?= $block->escapeHtml($product->getName()) ?></strong></h3></div>
+                                </div>
+                                <div class="item-details">
+                                    <span class="price"><?= $block->getFormattedPrice($product->getPrice()) ?></span>
+                                    <div class="attribute"><?php echo $block->getAttributeValue($product->getId(), 'promo_cell_content') ?></div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+                <?php echo $block->getChildHtml('product-promocell-addtocart'); ?>
+            </div>
+        </div>
+    </div>
+    <div generated="true" class="mage-error" id="message-error"></div>
+<script type="text/javascript">
+    require(['jquery',
+            'mage/gallery/gallery'
+        ],
+        function($,gallery) {
+            'use strict';
+            $(document).on("click",".promocell-product-options .option-values .value",function() {
+            // $('.promocell-product-options .option-values .value').on('click', function () {
+                var parent = $(this).closest('div.options-wrapper');
+                parent.find('.option-values .selected').removeClass('selected');
+                $(this).addClass('selected');
+                var element = this;
+                var eleVal = $(element).attr('attr-value');
+                var attrInput = parent.find('input.super-attribute-select-custom');
+                $(attrInput, function(){
+                    $(this).val(eleVal);
+                })
+                $('.super-attribute-select').val(eleVal).trigger('change');
+                // show detail info
+                showInfoDetail();
+                // show docs info
+                showDocsInfo();
+                // changeImageGallery();
+            })
+
+            // preselected attributes first.
+            $(document).ready(function () {
+                var attrs = $('div.options-wrapper')
+                attrs.each(function(){
+                    $(this).find('div.option-group:nth-child(2)').find('div.row:first-child').find('div.value:first-child').trigger('click');
+                    $('.super-attribute-select').val($(this).find('div.option-group:nth-child(2)').find('div.row:first-child').find('div.value:first-child').val()).trigger('change');
+                })
+            })
+            // validate
+            $('#product-addtocart-button').on('click', function(e){
+                if ($('input.super-attribute-select-custom').val().length === 0) {
+                    $('#message-error').text("<?= __('Please select a item!') ?>");
+                    e.preventDefault();
+                }
+            });
+            //function changeImageGallery() {
+            //    $(document).ready(function(){
+            //        var allimgsobj = '<?php //echo $block->getGalleryImagesJson(); ?>//';
+            //        $('.gallery-placeholder').on('gallery:loaded', function () {
+            //            var res = [{}];
+            //            $.each(JSON.parse(allimgsobj), function(i, obj) {
+            //                if(obj.caption != null){
+            //                    res[i] = obj;
+            //                }
+            //            });
+            //            var gallery = $('.gallery-placeholder').data('gallery');
+            //            gallery.fotorama.load(res); // this will reload the gallary with fresh json data
+            //            gallery.first(); // this will select first image on load in gallary
+            //        });
+            //    });
+            //}
+            function showInfoDetail() {
+                var currentItemInfo = $('.info-detail').find('.show');
+                if (currentItemInfo.length !== 0) {
+                    currentItemInfo.removeClass('show');
+                    currentItemInfo.prop('hidden', true);
+                }
+                var attrVals = getSelectedAttributeValString()
+                $('.info-detail').find('[attr-val="' + attrVals + '"]').addClass('show')
+                $('.info-detail').find('[attr-val="' + attrVals + '"]').removeAttr('hidden')
+            }
+            function showDocsInfo() {
+                var currentDocInfo = $('.promocell-product-document').find('.show');
+                if (currentDocInfo.length !== 0) {
+                    currentDocInfo.removeClass('show');
+                    currentDocInfo.prop('hidden', true);
+                }
+                var attrVals = getSelectedAttributeValString()
+                $('.promocell-product-document').find('[attr-val="' + attrVals + '"]').addClass('show')
+                $('.promocell-product-document').find('[attr-val="' + attrVals + '"]').removeAttr('hidden')
+            }
+            function getSelectedAttributeValString() {
+                var attrs = $('div.options-wrapper')
+                var attrVals = [];
+                attrs.each(function(){
+                    attrVals.push($(this).find('.value.selected').attr('attr-value'))
+                })
+                return attrVals.join('-');
+            }
+        }
+    );
+</script>
+<?php endif; ?>

@@ -48,8 +48,8 @@ class SerializedPositionProductLabels implements ObserverInterface
         $configurableMatrix = $this->request->getParam('configurable-matrix-serialized', "[]");
         if ($configurableMatrix != '') {
             $productsData = json_decode($configurableMatrix, true);
-            //    echo "<pre>";
-            //    var_dump($productsData);exit;
+        //    echo "<pre>";
+        //    var_dump($productsData);exit;
             foreach ($productsData as $key => $productData) {
                 $productRepository = $this->_productRepository->getById($productData["id"]);
                 $productRepository->setPositionConfigProduct($productData["position_config_product"]);
